@@ -92,12 +92,19 @@ overflow-y: auto;
       color: #fff;
       font-size: 0.8em;
     }
+  @keyframes pulseArrow {
+      0%, 100% { transform: translateY(-50%) scale(1); opacity: 0.9; }
+      50% { transform: translateY(-50%) scale(1.15); opacity: 1; }
+    }
   </style>
 </head>
 <body>
   <h1>Visual Snow FAQ</h1>
   <input type="text" id="search" placeholder="Search FAQ..." />
   <div class="book" id="book"></div>
+  </div>
+    <div style="position: absolute; right: -40px; top: 50%; transform: translateY(-50%); font-size: 2em; color: #fff; cursor: pointer; background: rgba(0,0,0,0.4); padding: 0.2em 0.4em; border-radius: 6px; animation: pulseArrow 2s infinite;" onclick="nextPage()" title="Next (→)">&#9654;</div>
+  </div>
   <div>
     <button onclick="prevPage()">Previous</button>
     <button onclick="nextPage()">Next</button>
