@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Visual Snow FAQ Flipbook</title>
+  <title>Visual Snow FAQ</title>
   <style>
     body {
       margin: 0;
@@ -13,23 +13,25 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      height: 100vh;
-      overflow: hidden;
+      min-height: 100vh;
+      overflow-x: hidden;
+overflow-y: auto;
     }
     h1 {
       margin: 1em 0 0.5em;
       font-size: 1.5em;
     }
     input[type="text"] {
-      margin-bottom: 1em;
+      margin-top: 1em;
+      margin-bottom: 1.5em;
       padding: 0.5em;
       border: none;
       border-radius: 5px;
       width: 80%;
     }
     .book {
-      width: 90%;
-      max-width: 500px;
+      width: 80%;
+      max-width: 440px;
       height: 60vh;
       perspective: 2000px;
       position: relative;
@@ -37,14 +39,15 @@
     .page {
       background: rgba(34, 34, 34, 0.9);
       border-radius: 8px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
       padding: 1em;
       position: absolute;
       width: 100%;
       height: 100%;
       backface-visibility: hidden;
       transform-origin: left;
-      transition: transform 0.6s ease;
+      will-change: transform, box-shadow, opacity;
+      transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 1.2s ease, opacity 0.8s ease;
       backdrop-filter: blur(3px);
       overflow-y: auto;
     }
@@ -60,6 +63,7 @@
       border-radius: 4px;
       cursor: pointer;
     }
+    .hidden { display: none; }
     .wisp {
       position: absolute;
       background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 80%);
@@ -87,12 +91,11 @@
       border-radius: 4px;
       color: #fff;
       font-size: 0.8em;
-      text-align: left;
     }
   </style>
 </head>
 <body>
-  <h1>Visual Snow FAQ Flipbook</h1>
+  <h1>Visual Snow FAQ</h1>
   <input type="text" id="search" placeholder="Search FAQ..." />
   <div class="book" id="book"></div>
   <div>
@@ -101,53 +104,56 @@
   </div>
   <div id="pageIndex"></div>
   <div style="margin-bottom: 1em; font-size: 0.9em;">
-    ❤️ Support Visual Snow research: <a href="https://visualsnowcommunity.github.io/VisualSnowCommunity/" target="_blank" style="color: #4ecdc4; text-decoration: underline;">Donate here</a>
+    ❤️ Support Visual Snow research:
+    <a href="https://visualsnowcommunity.github.io/VisualSnowCommunity/" target="_blank" style="color: #4ecdc4; text-decoration: underline;">
+      Donate here
+    </a>
   </div>
   <audio id="flipSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_b84c1ef649.mp3?filename=page-flip-8-141481.mp3"></audio>
   <script>
     const faqs = [
-  { q: "What is Visual Snow?", a: "Visual snow is a neurological condition characterized by seeing static or 'snow' in the visual field, similar to television static, which persists even with closed eyes." },
-  { q: "What does Visual Snow look like?", a: "Individuals report seeing small, flickering dots across their entire visual field, usually black and white or transparent." },
-  { q: "Is Visual Snow related to other eye or brain disorders?", a: "It may co-occur with migraines or tinnitus, but is considered a distinct condition." },
-  { q: "How common is Visual Snow?", a: "It's relatively rare, more frequent in those with migraine or aura symptoms." },
-  { q: "What causes Visual Snow?", a: "The exact cause is unknown, but research points to hyperactivity in visual processing areas like the thalamus and cortex." },
-  { q: "What are common symptoms of Visual Snow?", a: "Static vision, light sensitivity, afterimages, poor night vision, and color flashes." },
-  { q: "What is the Blue Field Entoptic Phenomenon?", a: "Seeing small bright dots against blue sky—common in visual snow." },
-  { q: "Can Visual Snow cause blindness?", a: "No, it affects perception, not physical vision." },
-  { q: "Is there a cure for Visual Snow?", a: "No cure currently, but symptom management is possible." },
-  { q: "What treatments are available?", a: "Migraine/anxiety meds, vision therapy, and lifestyle changes help some individuals." },
-  { q: "Does medication help?", a: "Some find relief with certain medications, but responses vary." },
-  { q: "Are lifestyle changes helpful?", a: "Yes. Sleep, stress reduction, and light management help some cope." },
-  { q: "What is photophobia?", a: "Light sensitivity that can worsen visual snow symptoms." },
-  { q: "Does caffeine worsen it?", a: "Some report increased symptoms, varies by person." },
-  { q: "Are visual exercises helpful?", a: "Some vision therapy may ease symptoms like light sensitivity." },
-  { q: "How does it affect night vision?", a: "It often worsens night vision due to static and sensitivity." },
-  { q: "Is Visual Snow progressive?", a: "Not usually, but stress can heighten awareness of symptoms." },
-  { q: "Can it go away on its own?", a: "Symptoms may lessen, but often persist long-term." },
-  { q: "Is Visual Snow genetic?", a: "No clear link, though a predisposition may exist." },
-  { q: "Does it only affect vision?", a: "Primarily visual, but may include tinnitus or dizziness." },
-  { q: "How is it diagnosed?", a: "Clinical evaluation—no specific test exists." },
-  { q: "Do visual aids help?", a: "Tinted lenses may reduce discomfort for some." },
-  { q: "Does screen time worsen it?", a: "Yes, for some. Breaks and brightness adjustment help." },
-  { q: "Is it a type of aura?", a: "No, but it can co-occur with migraine aura." },
-  { q: "What research exists?", a: "Focus on brain imaging, symptoms, and treatments." },
-  { q: "Are support groups available?", a: "Yes, online communities offer help and connection." },
-  { q: "Is it caused by stress or anxiety?", a: "Not directly, but both can exacerbate symptoms." },
-  { q: "How does it impact daily life?", a: "It may affect reading, driving, and work, but coping strategies help." },
-  { q: "Can I drive with it?", a: "Many can, though night driving may be difficult." },
-  { q: "Does it affect everyone the same way?", a: "No. Severity and symptoms vary widely." },
-  { q: "How to explain it to others?", a: "Compare it to TV static overlaying your vision." },
-  { q: "Alternative treatments?", a: "Some try acupuncture, supplements, or mindfulness—with mixed results." },
-  { q: "What to avoid?", a: "Bright lights, high-contrast screens, and stress may worsen symptoms." },
-  { q: "Can I wear contacts?", a: "Yes. Tinted glasses may be preferred for light filtering." },
-  { q: "Is it linked to medications?", a: "Rarely, some nervous system drugs might trigger it." },
-  { q: "Does it affect depth perception?", a: "It can interfere slightly due to constant visual noise." },
-  { q: "Can it cause eye pain?", a: "No, but eye strain may occur from light sensitivity." },
-  { q: "Mental health impact?", a: "Yes. It can lead to anxiety or depression. Support helps." },
-  { q: "Is it medically recognized?", a: "Yes, increasingly acknowledged by neurology experts." },
-  { q: "Other sensory issues?", a: "Some report tinnitus or mild disturbances." },
-  { q: "What if it worsens?", a: "Consult a doctor to reassess and manage symptoms." }
-];
+      { q: "What is Visual Snow?", a: "Visual snow is a neurological condition characterized by seeing static or 'snow' in the visual field, similar to television static, which persists even with closed eyes." },
+      { q: "What does Visual Snow look like?", a: "Individuals report seeing small, flickering dots across their entire visual field, usually black and white or transparent." },
+      { q: "Is Visual Snow related to other eye or brain disorders?", a: "It may co-occur with migraines or tinnitus, but is considered a distinct condition." },
+      { q: "How common is Visual Snow?", a: "It's relatively rare, more frequent in those with migraine or aura symptoms." },
+      { q: "What causes Visual Snow?", a: "The exact cause is unknown, but research points to hyperactivity in visual processing areas like the thalamus and cortex." },
+      { q: "What are common symptoms of Visual Snow?", a: "Static vision, light sensitivity, afterimages, poor night vision, and color flashes." },
+      { q: "What is the Blue Field Entoptic Phenomenon?", a: "Seeing small bright dots against blue sky - common in visual snow." },
+      { q: "Can Visual Snow cause blindness?", a: "No, it affects perception, not physical vision." },
+      { q: "Is there a cure for Visual Snow?", a: "No cure currently, but symptom management is possible." },
+      { q: "What treatments are available?", a: "Migraine/anxiety meds, vision therapy, and lifestyle changes help some individuals." },
+      { q: "Does medication help?", a: "Some find relief with certain medications, but responses vary." },
+      { q: "Are lifestyle changes helpful?", a: "Yes. Sleep, stress reduction, and light management help some cope." },
+      { q: "What is photophobia?", a: "Light sensitivity that can worsen visual snow symptoms." },
+      { q: "Does caffeine worsen it?", a: "Some report increased symptoms, varies by person." },
+      { q: "Are visual exercises helpful?", a: "Some vision therapy may ease symptoms like light sensitivity." },
+      { q: "How does it affect night vision?", a: "It often worsens night vision due to static and sensitivity." },
+      { q: "Is Visual Snow progressive?", a: "Not usually, but stress can heighten awareness of symptoms." },
+      { q: "Can it go away on its own?", a: "Symptoms may lessen, but often persist long-term." },
+      { q: "Is Visual Snow genetic?", a: "No clear link, though a predisposition may exist." },
+      { q: "Does it only affect vision?", a: "Primarily visual, but may include tinnitus or dizziness." },
+      { q: "How is it diagnosed?", a: "Clinical evaluation - no specific test exists." },
+      { q: "Do visual aids help?", a: "Tinted lenses may reduce discomfort for some." },
+      { q: "Does screen time worsen it?", a: "Yes, for some. Breaks and brightness adjustment help." },
+      { q: "Is it a type of aura?", a: "No, but it can co-occur with migraine aura." },
+      { q: "What research exists?", a: "Focus on brain imaging, symptoms, and treatments." },
+      { q: "Are support groups available?", a: "Yes, online communities offer help and connection." },
+      { q: "Is it caused by stress or anxiety?", a: "Not directly, but both can exacerbate symptoms." },
+      { q: "How does it impact daily life?", a: "It may affect reading, driving, and work, but coping strategies help." },
+      { q: "Can I drive with it?", a: "Many can, though night driving may be difficult." },
+      { q: "Does it affect everyone the same way?", a: "No. Severity and symptoms vary widely." },
+      { q: "How to explain it to others?", a: "Compare it to TV static overlaying your vision." },
+      { q: "Alternative treatments?", a: "Some try acupuncture, supplements, or mindfulness - with mixed results." },
+      { q: "What to avoid?", a: "Bright lights, high-contrast screens, and stress may worsen symptoms." },
+      { q: "Can I wear contacts?", a: "Yes. Tinted glasses may be preferred for light filtering." },
+      { q: "Is it linked to medications?", a: "Rarely, some nervous system drugs might trigger it." },
+      { q: "Does it affect depth perception?", a: "It can interfere slightly due to constant visual noise." },
+      { q: "Can it cause eye pain?", a: "No, but eye strain may occur from light sensitivity." },
+      { q: "Mental health impact?", a: "Yes. It can lead to anxiety or depression. Support helps." },
+      { q: "Is it medically recognized?", a: "Yes, increasingly acknowledged by neurology experts." },
+      { q: "Other sensory issues?", a: "Some report tinnitus or mild disturbances." },
+      { q: "What if it worsens?", a: "Consult a doctor to reassess and manage symptoms." }
+    ];
 
     const book = document.getElementById("book");
     const flipSound = document.getElementById("flipSound");
