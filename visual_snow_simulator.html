@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Visual Snow Simulator</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: black;
+      height: 100%;
+    }
+    #background {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 0;
+    }
+    #snowCanvas {
+      position: absolute;
+      top: 0; left: 0;
+      z-index: 1;
+      pointer-events: none;
+    }
+    #controls {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 2;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      padding: 12px;
+      border-radius: 12px;
+      font-family: sans-serif;
+      max-width: 260px;
+    }
+    label {
+      display: block;
+      margin: 8px 0 4px;
+    }
+    input[type="range"], input[type="file"] {
+      width: 100%;
+    }
+    button {
+      margin-top: 8px;
+      width: 100%;
+      padding: 6px;
+      border: none;
+      background: #444;
+      color: white;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #666;
+    }
+    #footer {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      z-index: 3;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 12px;
+      border-radius: 10px;
+      max-width: 280px;
+    }
+    #footer a {
+      color: #89e;
+      text-decoration: none;
+    }
+    #footer a:hover {
+      text-decoration: underline;
+    }
+    .easteregg {
+      opacity: 0;
+      font-size: 0;
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- Peaceful nature background -->
+  <img id="background" src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1950&q=80" alt="Nature background">
+
+  <!-- Visual snow overlay -->
+  <canvas id="snowCanvas"></canvas>
+
+  <!-- Controls -->
+  <div id="controls">
+    <label>Snow Intensity</label>
+    <input type="range" id="intensitySlider" min="0" max="100" value="60">
+
+    <label>Opacity</label>
+    <input type="range" id="opacitySlider" min="0" max="100" value="20">
+
+    <label>Color Noise</label>
+    <input type="range" id="colorSlider" min="0" max="100" value="0">
+
+    <label>Custom Background</label>
+    <input type="file" id="upload" accept="image/*">
+
+    <button onclick="setPreset(30, 10, 0)">Mild</button>
+    <button onclick="setPreset(60, 20, 20)">Moderate</button>
+    <button onclick="setPreset(90, 35, 50)">Severe</button>
+  </div>
+
+  <!-- Signature + donation -->
+  <div id="footer">
+    Made with care by <strong>CodeQuestions__</strong>
+    <span class="easteregg">(Alex Hill)</span><br>
+    Support us: <a href="https://visualsnowcommunity.github.io/VisualSnowCommunity/" target="_blank">Donate or Learn More</a>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('snowCanvas');
+    const ctx = canvas.getContext('2d');
+    const intensitySlider = document.getElementById('intensitySlider');
+    const opacitySlider = document.getElementById('opacitySlider');
+    const colorSlider = document.getElementById('colorSlider');
+    const upload = document.getElementById('upload');
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function drawSnow() {
+      const width = canvas.width;
+      const height = canvas.height;
+      const imageData = ctx.createImageData(width, height);
+      const data = imageData.data;
+      const intensity = parseInt(intensitySlider.value);
+      const opacity = parseInt(opacitySlider.value) / 100;
+      const colorNoise = parseInt(colorSlider.value) / 100;
+
+      for (let i = 0; i < data.length; i += 4) {
+        if (Math.random() * 100 < intensity) {
+          const base = Math.random() * 255;
+          const r = base + (Math.random() - 0.5) * 255 * colorNoise;
+          const g = base + (Math.random() - 0.5) * 255 * colorNoise;
+          const b = base + (Math.random() - 0.5) * 255 * colorNoise;
+          data[i] = clamp(r);
+          data[i + 1] = clamp(g);
+          data[i + 2] = clamp(b);
+          data[i + 3] = opacity * 255;
+        } else {
+          data[i + 3] = 0;
+        }
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+    }
+
+    function clamp(val) {
+      return Math.max(0, Math.min(255, val));
+    }
+
+    function loop() {
+      drawSnow();
+      requestAnimationFrame(loop);
+    }
+
+    function setPreset(intensity, opacity, color) {
+      intensitySlider.value = intensity;
+      opacitySlider.value = opacity;
+      colorSlider.value = color;
+    }
+
+    upload.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          document.getElementById('background').src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    loop();
+  </script>
+</body>
+</html>
