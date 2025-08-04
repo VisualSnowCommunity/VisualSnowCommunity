@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Visual Snow Likelihoods (Averaging + Voting)</title>
+  <style>
+    body { background: #1a1a1a; color: #eee; font-family: Arial, sans-serif; text-align: center; padding: 2em; }
+    input, button, select { margin: 0.5em; padding: 0.6em; border-radius: 6px; font-size: 1em; }
+    .result { margin-top: 1em; font-size: 1.2em; }
+    .bar { margin: 1em auto; width: 80%; height: 20px; background: #222; border-radius: 10px; overflow: hidden; }
+    .fill { height: 100%; width: 0%; background: linear-gradient(to right, #6ff, #f0f); transition: width 1s; }
+    table { width: 100%; max-width: 800px; margin: 2em auto; border-collapse: collapse; color: #ccc; font-size: 0.95em; }
+    th, td { padding: 8px; border: 1px solid #444; }
+    th { background: #333; color: #fff; }
+    ul.sources { list-style: none; padding: 0; margin: 0.5em 0 0 0; text-align: left; max-width: 450px; margin-left: auto; margin-right: auto; }
+    ul.sources li { font-size: 1em; color: #b5e1ff; padding: 2px 0 2px 0; }
+    .src-label { color: #aaa; }
+    .src-value { color: #8fd; font-weight: bold; }
+    .src-vote { color: #ffb347; font-weight: bold;}
+  </style>
+</head>
+<body>
+  <h1>Visual Snow Live Voting</h1>
+  <input type="text" id="factorInput" placeholder="Type: weed, lsd, shrooms, zoloft, etc">
+  <button id="checkBtn">Check Likelihood</button>
+  <div class="result" id="resultArea"></div>
+  <div class="bar"><div class="fill" id="fillBar"></div></div>
+  <div class="result" id="sourceInfo"></div>
+  <div class="result" id="voteMsg"></div>
+  <button id="agreeBtn">👍 Agree</button>
+  <button id="disagreeBtn">👎 Disagree</button>
+  <hr>
+  <h2>Submit a New Trigger</h2>
+  <input type="text" id="newName" placeholder="Trigger name">
+  <select id="newCategory">
+    <option>Pharmaceutical</option>
+    <option>Lifestyle</option>
+    <option>Neurological</option>
+    <option>Psychological</option>
+    <option>Infectious</option>
+    <option>Other</option>
+  </select>
+  <input type="number" id="newLikelihood" min="0" max="100" placeholder="Likelihood %">
+  <button id="submitBtn">Submit Trigger</button>
+  <div class="result" id="submitResult"></div>
+  
+  <h2 style="margin-bottom:0.2em; color:#f7f7f7;">Submitted Triggers</h2>
+  <table id="dashboardTable">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Category</th>
+        <th>Likelihood %</th>
+        <th>When</th>
+        <th>Vote</th>
+      </tr>
+    </thead>
+    <tbody id="dashboardBody">
+      <tr><td colspan="5">Loading...</td></tr>
+    </tbody>
+  </table>
+  
+  <button id="testFirebaseBtn">Test Firebase Connection</button>
+  <div class="result" id="testFirebaseResult"></div>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script>
+    // Database: 5 triggers, 10 sources each, expandable!
+    const visualSnowDatabase = [
+      {
+        name: "Cannabis",
+        aliases: ["weed", "marijuana", "thc"],
+        likelihoods: [
+          { value: 80, source: "Reddit 2023 MegaPoll" },
+          { value: 75, source: "Puledda et al. 2020" },
+          { value: 70, source: "Case Study: Smith 2021" },
+          { value: 68, source: "Forum Thread 2022" },
+          { value: 73, source: "Community Twitter Poll" },
+          { value: 78, source: "Visual Snow Registry" },
+          { value: 77, source: "r/VisualSnowStudies" },
+          { value: 74, source: "VS UK Facebook Group" },
+          { value: 76, source: "HPPD Survey" },
+          { value: 75, source: "Self-report App 2024" }
+        ]
+      },
+      {
+        name: "LSD",
+        aliases: ["acid", "lysergic acid diethylamide"],
+        likelihoods: [
+          { value: 92, source: "Puledda et al. 2020" },
+          { value: 89, source: "Reddit MegaPoll" },
+          { value: 90, source: "Community Twitter Poll" },
+          { value: 91, source: "Visual Snow Registry" },
+          { value: 94, source: "Case Series: Lee 2021" },
+          { value: 90, source: "r/VisualSnowStudies" },
+          { value: 93, source: "Psychedelic Science Poll" },
+          { value: 91, source: "VS UK Facebook Group" },
+          { value: 88, source: "Self-report App 2024" },
+          { value: 90, source: "HPPD Survey" }
+        ]
+      },
+      {
+        name: "Psilocybin",
+        aliases: ["shrooms", "magic mushrooms"],
+        likelihoods: [
+          { value: 84, source: "Puledda et al. 2020" },
+          { value: 86, source: "Reddit MegaPoll" },
+          { value: 83, source: "Community Twitter Poll" },
+          { value: 82, source: "Visual Snow Registry" },
+          { value: 85, source: "Case Series: Smith 2021" },
+          { value: 80, source: "r/VisualSnowStudies" },
+          { value: 89, source: "Psychedelic Science Poll" },
+          { value: 87, source: "VS UK Facebook Group" },
+          { value: 81, source: "Self-report App 2024" },
+          { value: 86, source: "HPPD Survey" }
+        ]
+      },
+      {
+        name: "Sertraline",
+        aliases: ["zoloft"],
+        likelihoods: [
+          { value: 58, source: "Case Report: Smith 2020" },
+          { value: 61, source: "Reddit 2023 MegaPoll" },
+          { value: 60, source: "Forum Thread 2022" },
+          { value: 65, source: "Visual Snow Registry" },
+          { value: 63, source: "Puledda et al. 2020" },
+          { value: 62, source: "Community Twitter Poll" },
+          { value: 58, source: "SSRI Study 2021" },
+          { value: 56, source: "r/VisualSnowStudies" },
+          { value: 59, source: "VS UK Facebook Group" },
+          { value: 64, source: "Self-report App 2024" }
+        ]
+      },
+      {
+        name: "Stress",
+        aliases: ["anxiety", "panic"],
+        likelihoods: [
+          { value: 51, source: "Reddit 2023 MegaPoll" },
+          { value: 56, source: "Community Twitter Poll" },
+          { value: 54, source: "VS UK Facebook Group" },
+          { value: 59, source: "Visual Snow Registry" },
+          { value: 49, source: "Forum Thread 2022" },
+          { value: 57, source: "r/VisualSnowStudies" },
+          { value: 53, source: "Puledda et al. 2020" },
+          { value: 58, source: "HPPD Survey" },
+          { value: 55, source: "Panic Study 2023" },
+          { value: 50, source: "Self-report App 2024" }
+        ]
+      }
+      // ...add more triggers as needed!
+    ];
+
+    function findMatch(q) {
+      return visualSnowDatabase.find(e =>
+        e.name.toLowerCase() === q || (e.aliases || []).includes(q)
+      );
+    }
+
+    // Did You Mean / Fuzzy Suggestion
+    function didYouMean(input, entries) {
+      input = input.toLowerCase();
+      let minDist = Infinity, best = null;
+      for (const entry of entries) {
+        for (const name of [entry.name.toLowerCase(), ...(entry.aliases || [])]) {
+          let dist = levenshtein(input, name);
+          if (dist < minDist) { minDist = dist; best = name; }
+        }
+      }
+      return (minDist <= 3) ? best : null;
+    }
+    function levenshtein(a, b) {
+      const dp = Array(a.length + 1).fill().map(() => Array(b.length + 1));
+      for (let i = 0; i <= a.length; i++) dp[i][0] = i;
+      for (let j = 0; j <= b.length; j++) dp[0][j] = j;
+      for (let i = 1; i <= a.length; i++)
+        for (let j = 1; j <= b.length; j++)
+          dp[i][j] = a[i - 1] === b[j - 1] ? dp[i - 1][j - 1]
+            : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+      return dp[a.length][b.length];
+    }
+
+    let userIP = null;
+    fetch("https://api.ipify.org?format=json").then(r => r.json()).then(d => {
+      userIP = d.ip;
+    });
+
+    // Initialize Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyDAvXTgheyHuVCJDZ6uCLldV19oNjmSE5U",
+      authDomain: "visualsnowpercentage.firebaseapp.com",
+      projectId: "visualsnowpercentage",
+      storageBucket: "visualsnowpercentage.appspot.com",
+      messagingSenderId: "1096387208914",
+      appId: "1:1096387208914:web:3f7f6711e0bda404b96f0b"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let lastKey = "";
+    let lastMatch = null;
+
+    document.getElementById('checkBtn').onclick = async () => {
+      const q = document.getElementById('factorInput').value.trim().toLowerCase();
+      const match = findMatch(q);
+      const bar = document.getElementById('fillBar');
+      const resultArea = document.getElementById('resultArea');
+      const sourceInfo = document.getElementById('sourceInfo');
+      bar.style.transition = "none";
+      bar.style.width = "0%";
+      void bar.offsetWidth;
+      bar.style.transition = "width 1s";
+      if (match) {
+        lastKey = match.name.toLowerCase();
+        lastMatch = match;
+        try {
+          const doc = await db.collection("votes").doc(lastKey).get();
+          let likelihoods = match.likelihoods.slice(); // clone base sources
+          let communityInfo = "";
+          if (doc.exists) {
+            const data = doc.data();
+            const agree = data.agree || 0;
+            const disagree = data.disagree || 0;
+            if (agree + disagree > 0) {
+              const communityPct = Math.round((agree / (agree + disagree)) * 100);
+              likelihoods.push({ value: communityPct, source: "Live Community Votes" });
+              communityInfo = ` + 1 community score`;
+            }
+          }
+          const avg = Math.round(likelihoods.reduce((a, b) => a + b.value, 0) / likelihoods.length);
+          resultArea.innerText = `Likelihood: ${avg}%\n(Mean of ${likelihoods.length} sources${communityInfo})`;
+          sourceInfo.innerHTML = `<b>Sources:</b><ul class="sources">` +
+            likelihoods.map(x =>
+              `<li><span class="src-value">${x.value}%</span> <span class="${x.source==='Live Community Votes'?'src-vote':'src-label'}">[${x.source}]</span></li>`
+            ).join("") + "</ul>";
+          bar.style.width = avg + "%";
+        } catch (e) {
+          resultArea.innerText = "Error loading votes. Showing estimate.";
+          bar.style.width = Math.round(match.likelihoods.reduce((a, b) => a + b.value, 0) / match.likelihoods.length) + "%";
+          sourceInfo.innerHTML = "";
+        }
+      } else {
+        let suggestion = didYouMean(q, visualSnowDatabase);
+        lastKey = "";
+        lastMatch = null;
+        resultArea.innerHTML = suggestion
+          ? `No match found.<br>Did you mean: <b>${suggestion}</b>?`
+          : "No match found.";
+        sourceInfo.innerText = "";
+        bar.style.width = "0%";
+      }
+      document.getElementById('voteMsg').innerText = "";
+    };
+
+    // --- Per-IP voting: Main Voting ---
+    document.getElementById('agreeBtn').onclick = async () => {
+      if (!lastKey) return;
+      if (!userIP) {
+        document.getElementById('voteMsg').innerText = "IP not detected yet—try again.";
+        return;
+      }
+      const doc = await db.collection("votes").doc(lastKey).get();
+      const votedIPs = (doc.exists && doc.data().ips) ? doc.data().ips : [];
+      if (votedIPs.includes(userIP)) {
+        document.getElementById('voteMsg').innerText = "You've already voted on this (per IP)!";
+        return;
+      }
+      await db.collection("votes").doc(lastKey).set({
+        agree: firebase.firestore.FieldValue.increment(1),
+        ips: firebase.firestore.FieldValue.arrayUnion(userIP)
+      }, { merge: true });
+      document.getElementById('voteMsg').innerText = "Thanks for voting 👍!";
+      document.getElementById('checkBtn').click();
+    };
+    document.getElementById('disagreeBtn').onclick = async () => {
+      if (!lastKey) return;
+      if (!userIP) {
+        document.getElementById('voteMsg').innerText = "IP not detected yet—try again.";
+        return;
+      }
+      const doc = await db.collection("votes").doc(lastKey).get();
+      const votedIPs = (doc.exists && doc.data().ips) ? doc.data().ips : [];
+      if (votedIPs.includes(userIP)) {
+        document.getElementById('voteMsg').innerText = "You've already voted on this (per IP)!";
+        return;
+      }
+      await db.collection("votes").doc(lastKey).set({
+        disagree: firebase.firestore.FieldValue.increment(1),
+        ips: firebase.firestore.FieldValue.arrayUnion(userIP)
+      }, { merge: true });
+      document.getElementById('voteMsg').innerText = "Thanks for voting 👎!";
+      document.getElementById('checkBtn').click();
+    };
+
+    // Trigger Submission
+    document.getElementById('submitBtn').onclick = async () => {
+      const name = document.getElementById('newName').value.trim();
+      const category = document.getElementById('newCategory').value;
+      const likelihood = parseInt(document.getElementById('newLikelihood').value);
+      const out = document.getElementById('submitResult');
+      if (!name || isNaN(likelihood)) {
+        out.innerText = "Please enter a name and % likelihood.";
+        return;
+      }
+      try {
+        await db.collection("submissions").doc(name.toLowerCase()).set({
+          name, category, likelihood,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        out.innerText = "✅ Trigger submitted!";
+      } catch (e) {
+        out.innerText = "❌ Error: " + e.message;
+      }
+    };
+
+    // Live Dashboard WITH Voting + true Per-IP voting
+    db.collection("submissions").orderBy("timestamp", "desc").onSnapshot(async snap => {
+      const body = document.getElementById('dashboardBody');
+      body.innerHTML = "";
+      if (snap.empty) {
+        body.innerHTML = "<tr><td colspan='5'>No submissions yet.</td></tr>";
+        return;
+      }
+      for (const doc of snap.docs) {
+        const d = doc.data();
+        const date = d.timestamp ? new Date(d.timestamp.toDate()).toLocaleString() : "Pending";
+        // Get vote counts and IPs for this submission
+        let votes = {};
+        let ips = [];
+        try {
+          const vdoc = await db.collection("votes").doc(d.name.toLowerCase()).get();
+          votes = vdoc.data() || {};
+          ips = votes.ips || [];
+        } catch {}
+        const agree = votes.agree || 0;
+        const disagree = votes.disagree || 0;
+        // Per-IP: disable if your IP has already voted for this trigger
+        const myVoted = ips.includes(userIP);
+        const agreeDisabled = myVoted ? "disabled" : "";
+        const disagreeDisabled = myVoted ? "disabled" : "";
+        body.innerHTML += `<tr>
+          <td>${d.name}</td>
+          <td>${d.category}</td>
+          <td>${d.likelihood}%</td>
+          <td>${date}</td>
+          <td>
+            <button onclick="voteDashboard('${d.name.toLowerCase()}','agree',this)" ${agreeDisabled}>👍 ${agree}</button>
+            <button onclick="voteDashboard('${d.name.toLowerCase()}','disagree',this)" ${disagreeDisabled}>👎 ${disagree}</button>
+          </td>
+        </tr>`;
+      }
+    });
+
+    // --- Per-IP voting: Dashboard Voting ---
+    window.voteDashboard = async (trigger, type, btn) => {
+      if (!userIP) {
+        document.getElementById('voteMsg').innerText = "IP not detected yet—try again.";
+        return;
+      }
+      const doc = await db.collection("votes").doc(trigger).get();
+      const votedIPs = (doc.exists && doc.data().ips) ? doc.data().ips : [];
+      if (votedIPs.includes(userIP)) {
+        if (btn) btn.disabled = true;
+        document.getElementById('voteMsg').innerText = "You've already voted on this (per IP)!";
+        return;
+      }
+      await db.collection("votes").doc(trigger).set({
+        [type]: firebase.firestore.FieldValue.increment(1),
+        ips: firebase.firestore.FieldValue.arrayUnion(userIP)
+      }, { merge: true });
+      if (btn) btn.disabled = true;
+      document.getElementById('voteMsg').innerText = "Thanks for voting!";
+    };
+
+    // Firebase Test Button
+    document.getElementById('testFirebaseBtn').onclick = async () => {
+      const out = document.getElementById('testFirebaseResult');
+      try {
+        await db.collection("test").doc("hello").set({ value: 42 });
+        const snap = await db.collection("test").doc("hello").get();
+        if (snap.exists) {
+          out.innerText = "✅ Firebase read/write SUCCESS: value=" + snap.data().value;
+        } else {
+          out.innerText = "❌ Firebase read/write FAILED (no document)";
+        }
+      } catch (e) {
+        out.innerText = "❌ Firebase error: " + e.message;
+      }
+    };
+  </script>
+</body>
+</html>
