@@ -2,122 +2,140 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Visual Snow FAQ</title>
   <style>
-    body {
-      margin: 0;
-      font-family: 'Georgia', serif;
-      background: radial-gradient(ellipse at center, #111 0%, #000 100%);
-      color: #f5f5f5;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-      overflow-x: hidden;
-overflow-y: auto;
+    :root{
+      --bg:#0c0c0f;
+      --bg2:#101016;
+      --card:rgba(28,28,36,.85);
+      --text:#f3f4f6;
+      --muted:#a5a7ae;
+      --accent:#4ecdc4;
+      --accent-2:#7ad9d2;
+      --ring:rgba(78,205,196,.35);
+      --shadow:0 10px 30px rgba(0,0,0,.45);
+      --radius:14px;
     }
-    h1 {
-      margin: 1em 0 0.5em;
-      font-size: 1.5em;
+
+    /* Base */
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      color:var(--text);
+      background: radial-gradient(1200px 800px at 50% -20%, #1a1a24 0%, var(--bg) 45%, #000 100%);
+      display:flex; flex-direction:column; align-items:center;
+      overflow-x:hidden; overflow-y:auto;
     }
-    input[type="text"] {
-      margin-top: 1em;
-      margin-bottom: 1.5em;
-      padding: 0.5em;
-      border: none;
-      border-radius: 5px;
-      width: 80%;
+
+    /* Header */
+    header{
+      width:100%;
+      position:sticky; top:0; z-index:10;
+      backdrop-filter:saturate(120%) blur(6px);
+      background:linear-gradient(180deg, rgba(18,18,24,.9), rgba(18,18,24,.4));
+      border-bottom:1px solid rgba(255,255,255,.06);
     }
-    .book {
-      width: 80%;
-      max-width: 440px;
-      height: 60vh;
-      perspective: 2000px;
-      position: relative;
+    .wrap{max-width:980px; margin:0 auto; padding:12px 16px;}
+    .title{display:flex; align-items:center; gap:.75rem}
+    .logo{width:28px;height:28px;border-radius:8px;background:radial-gradient(circle at 30% 30%, var(--accent-2), var(--accent)); box-shadow:0 0 30px var(--ring);}
+    h1{font-size:clamp(18px,2.5vw,28px); margin:0; letter-spacing:.2px}
+
+    /* Search & Controls */
+    .toolbar{display:flex; flex-wrap:wrap; gap:.6rem; margin-top:10px; align-items:center}
+    #search{flex:1 1 280px; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.08); background:#14141b; color:var(--text); outline:none}
+    #search:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--ring)}
+    .btn{padding:10px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.08); background:#14141b; color:var(--text); cursor:pointer}
+    .btn:hover{border-color:rgba(255,255,255,.18)}
+
+    /* Book */
+    .stage{display:flex; flex-direction:column; align-items:center; gap:10px; padding:18px 12px 24px}
+    .book{width:min(92vw,540px); height:64vh; min-height:420px; perspective:2000px; position:relative}
+
+    .page{
+      background:var(--card);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      position:absolute; inset:0; padding:18px 18px 24px 18px;
+      border:1px solid rgba(255,255,255,.06);
+      backdrop-filter: blur(6px) saturate(110%);
+      transform-origin:left; backface-visibility:hidden;
+      transition: transform 1s cubic-bezier(.22,.61,.36,1), box-shadow .6s ease, opacity .6s ease;
+      overflow:auto;
     }
-    .page {
-      background: rgba(34, 34, 34, 0.9);
-      border-radius: 8px;
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
-      padding: 1em;
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      backface-visibility: hidden;
-      transform-origin: left;
-      will-change: transform, box-shadow, opacity;
-      transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 1.2s ease, opacity 0.8s ease;
-      backdrop-filter: blur(3px);
-      overflow-y: auto;
+    .page h2{font-size:clamp(16px,2.2vw,22px); margin:0 0 .6rem}
+    .page p{line-height:1.55; color:#d7dae0; margin:0}
+    .flipped{ transform: rotateY(-180deg); box-shadow:-8px 0 22px rgba(0,0,0,.35)}
+
+    /* Index */
+    #pageIndex{ display:flex; flex-wrap:wrap; gap:.4rem; justify-content:center; max-width:960px; padding:0 12px 14px}
+    #pageIndex button{padding:.45rem .65rem; font-size:.85rem; border-radius:10px; background:#12121a; color:#e9e9ee; border:1px solid rgba(255,255,255,.08); cursor:pointer}
+    #pageIndex button:hover{border-color:rgba(255,255,255,.18)}
+
+    /* Controls */
+    .controls{display:flex; align-items:center; gap:.6rem}
+    .icon-btn{width:40px; height:40px; display:grid; place-items:center; border-radius:12px; border:1px solid rgba(255,255,255,.08); background:#14141b; cursor:pointer}
+    .icon-btn:hover{border-color:rgba(255,255,255,.18)}
+    .pill{font-size:.9rem; color:var(--muted)}
+    .accent{color:var(--accent)}
+
+    /* Wisps */
+    .wisp{ position:fixed; pointer-events:none; z-index:0; background: radial-gradient(circle, rgba(255,255,255,.08) 0%, transparent 70%); border-radius:50%; animation:float 18s infinite ease-in-out;}
+    @keyframes float{0%{transform:translateY(80vh) scale(.25); opacity:0}50%{opacity:.25}100%{transform:translateY(-20vh) scale(1); opacity:0}}
+
+    /* Progress Bar */
+    .progress{height:6px; width:100%; background:rgba(255,255,255,.06); border-radius:999px; overflow:hidden}
+    .progress > span{display:block; height:100%; width:0%; background:linear-gradient(90deg,var(--accent), var(--accent-2));}
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce){
+      .wisp{display:none}
+      .page{transition:none}
     }
-    .flipped {
-      transform: rotateY(-180deg);
-    }
-    button {
-      margin: 1em;
-      padding: 0.5em 1em;
-      background: #444;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .hidden { display: none; }
-    .wisp {
-      position: absolute;
-      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 80%);
-      border-radius: 50%;
-      animation: float 20s infinite ease-in-out;
-    }
-    @keyframes float {
-      0% { transform: translateY(100vh) scale(0.3); opacity: 0; }
-      50% { opacity: 0.3; }
-      100% { transform: translateY(-10vh) scale(1); opacity: 0; }
-    }
-    #pageIndex {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      max-width: 90%;
-      overflow-y: auto;
-      gap: 0.5em;
-      margin-top: 0.5em;
-    }
-    #pageIndex button {
-      padding: 0.3em 0.6em;
-      background: #333;
-      border: 1px solid #666;
-      border-radius: 4px;
-      color: #fff;
-      font-size: 0.8em;
-    }
-  @keyframes pulseArrow {
-      0%, 100% { transform: translateY(-50%) scale(1); opacity: 0.9; }
-      50% { transform: translateY(-50%) scale(1.15); opacity: 1; }
+
+    /* Small screens */
+    @media (max-width:420px){
+      .book{height:62vh; min-height:380px}
+      #pageIndex{display:none}
     }
   </style>
 </head>
 <body>
-  <h1>Visual Snow FAQ</h1>
-  <input type="text" id="search" placeholder="Search FAQ..." />
-  <div class="book" id="book"></div>
-  </div>
-    <div style="position: absolute; right: -40px; top: 50%; transform: translateY(-50%); font-size: 2em; color: #fff; cursor: pointer; background: rgba(0,0,0,0.4); padding: 0.2em 0.4em; border-radius: 6px; animation: pulseArrow 2s infinite;" onclick="nextPage()" title="Next (→)">&#9654;</div>
-  </div>
-  <div>
-    <button onclick="prevPage()">Previous</button>
-    <button onclick="nextPage()">Next</button>
-  </div>
-  <div id="pageIndex"></div>
-  <div style="margin-bottom: 1em; font-size: 0.9em;">
-    ❤️ Support Visual Snow research:
-    <a href="https://visualsnowcommunity.github.io/VisualSnowCommunity/" target="_blank" style="color: #4ecdc4; text-decoration: underline;">
-      Donate here
-    </a>
-  </div>
+  <header>
+    <div class="wrap">
+      <div class="title">
+        <div class="logo" aria-hidden="true"></div>
+        <h1>Visual Snow FAQ</h1>
+      </div>
+      <div class="toolbar" role="region" aria-label="Search and controls">
+        <input id="search" type="text" placeholder="Search FAQ… (e.g., photophobia)" aria-label="Search FAQs" />
+        <button class="btn" id="toggle-sound" aria-pressed="true" aria-label="Toggle page flip sound">🔊 Sound</button>
+        <div class="pill" id="page-pill">Page <span class="accent" id="pageNow">1</span>/<span id="pageTotal">1</span></div>
+      </div>
+      <div class="progress"><span id="progressFill"></span></div>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div class="controls" aria-label="Page navigation">
+      <button class="icon-btn" id="prevBtn" title="Previous (←)" aria-label="Previous page">⟵</button>
+      <div class="book" id="book" aria-live="polite"></div>
+      <button class="icon-btn" id="nextBtn" title="Next (→)" aria-label="Next page">⟶</button>
+    </div>
+  </main>
+
+  <section id="pageIndex" aria-label="Quick index"></section>
+
+  <footer class="wrap" style="opacity:.9; padding-bottom:48px">
+    <p style="margin:.6rem 0 0; font-size:.9rem; color:var(--muted)">❤️ Support Visual Snow research: <a href="https://visualsnowcommunity.github.io/VisualSnowCommunity/" target="_blank" style="color:var(--accent)">Donate here</a></p>
+  </footer>
+
   <audio id="flipSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_b84c1ef649.mp3?filename=page-flip-8-141481.mp3"></audio>
+
   <script>
+    // ===== Data (use your existing array or the updated one) =====
     const faqs = [
       { q: "What is Visual Snow?", a: "Visual snow is a neurological condition characterized by seeing static or 'snow' in the visual field, similar to television static, which persists even with closed eyes." },
       { q: "What does Visual Snow look like?", a: "Individuals report seeing small, flickering dots across their entire visual field, usually black and white or transparent." },
@@ -162,94 +180,114 @@ overflow-y: auto;
       { q: "What if it worsens?", a: "Consult a doctor to reassess and manage symptoms." }
     ];
 
-    const book = document.getElementById("book");
-    const flipSound = document.getElementById("flipSound");
-    const pageIndex = document.getElementById("pageIndex");
-    let currentPage = 0;
+    // ===== Elements =====
+    const book = document.getElementById('book');
+    const pageIndex = document.getElementById('pageIndex');
+    const flipSound = document.getElementById('flipSound');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const searchInput = document.getElementById('search');
+    const pageNow = document.getElementById('pageNow');
+    const pageTotal = document.getElementById('pageTotal');
+    const progressFill = document.getElementById('progressFill');
+    const soundBtn = document.getElementById('toggle-sound');
 
-    function renderPages(filteredFaqs) {
-      book.innerHTML = "";
-      pageIndex.innerHTML = "";
-      filteredFaqs.forEach((item, i) => {
-        const page = document.createElement("div");
-        page.className = "page";
-        page.style.zIndex = filteredFaqs.length - i;
-        page.innerHTML = `<h2>${item.q}</h2><p>${item.a}</p>`;
+    let currentPage = 0;
+    let soundOn = true;
+    let filtered = [...faqs];
+
+    // ===== Render =====
+    function highlight(text, term){
+      if(!term) return text;
+      const esc = term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+      return text.replace(new RegExp(`(${esc})`,'gi'), '<mark style="background: rgba(78,205,196,.25); color: inherit; padding: 0 .15em; border-radius: 4px;">$1</mark>');
+    }
+
+    function renderPages(){
+      book.innerHTML = '';
+      pageIndex.innerHTML = '';
+      filtered.forEach((item,i)=>{
+        const page = document.createElement('div');
+        page.className = 'page';
+        page.style.zIndex = filtered.length - i;
+        const term = searchInput.value.trim();
+        page.innerHTML = `<h2>${highlight(item.q, term)}</h2><p>${highlight(item.a, term)}</p>`;
         book.appendChild(page);
 
-        const indexButton = document.createElement("button");
-        indexButton.textContent = `${i + 1}. ${item.q}`;
-        indexButton.onclick = () => {
-          currentPage = i;
-          updateFlip();
-          flipSound.play();
-        };
-        pageIndex.appendChild(indexButton);
+        const idx = document.createElement('button');
+        idx.textContent = `${i+1}. ${item.q}`;
+        idx.addEventListener('click',()=>{ currentPage = i; updateFlip(true); play(); });
+        pageIndex.appendChild(idx);
       });
-      updateFlip();
+      updateFlip(false);
+      updateMeta();
     }
 
-    function updateFlip() {
-      const pages = document.querySelectorAll(".page");
-      pages.forEach((p, i) => {
-        if (i < currentPage) p.classList.add("flipped");
-        else p.classList.remove("flipped");
-      });
-    }
-
-    function nextPage() {
-      if (currentPage < document.querySelectorAll(".page").length) {
-        currentPage++;
-        updateFlip();
-        flipSound.play();
+    function updateFlip(withFocus){
+      const pages = book.querySelectorAll('.page');
+      pages.forEach((p,i)=>{ p.classList.toggle('flipped', i < currentPage); });
+      if(withFocus){
+        const pg = pages[currentPage];
+        if(pg) pg.focus?.();
       }
+      updateMeta();
     }
 
-    function prevPage() {
-      if (currentPage > 0) {
-        currentPage--;
-        updateFlip();
-        flipSound.play();
-      }
+    function updateMeta(){
+      pageNow.textContent = Math.min(currentPage+1, Math.max(filtered.length,1));
+      pageTotal.textContent = filtered.length;
+      const pct = filtered.length ? ((currentPage+1)/filtered.length)*100 : 0;
+      progressFill.style.width = pct + '%';
     }
 
-    document.getElementById("search").addEventListener("input", e => {
-      const term = e.target.value.toLowerCase();
-      const filtered = faqs.filter(f => f.q.toLowerCase().includes(term) || f.a.toLowerCase().includes(term));
-      currentPage = 0;
-      renderPages(filtered);
-    });
+    function nextPage(){ if(currentPage < filtered.length){ currentPage++; updateFlip(true); play(); } }
+    function prevPage(){ if(currentPage > 0){ currentPage--; updateFlip(true); play(); } }
+    function play(){ if(soundOn) flipSound.currentTime = 0, flipSound.play(); }
 
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowRight") nextPage();
-      else if (e.key === "ArrowLeft") prevPage();
+    // ===== Events =====
+    prevBtn.addEventListener('click', prevPage);
+    nextBtn.addEventListener('click', nextPage);
+
+    document.addEventListener('keydown', e=>{
+      if(e.key==='ArrowRight') nextPage();
+      if(e.key==='ArrowLeft') prevPage();
     });
 
     let touchStartX = 0;
-    book.addEventListener("touchstart", (e) => {
-      touchStartX = e.touches[0].clientX;
-    });
-    book.addEventListener("touchend", (e) => {
-      const touchEndX = e.changedTouches[0].clientX;
-      if (touchEndX < touchStartX - 50) nextPage();
-      else if (touchEndX > touchStartX + 50) prevPage();
+    book.addEventListener('touchstart', e=>{ touchStartX = e.touches[0].clientX; }, {passive:true});
+    book.addEventListener('touchend', e=>{
+      const x = e.changedTouches[0].clientX;
+      if(x < touchStartX - 40) nextPage();
+      else if(x > touchStartX + 40) prevPage();
     });
 
-    function spawnWisps(count) {
-      for (let i = 0; i < count; i++) {
-        const wisp = document.createElement('div');
-        wisp.className = 'wisp';
-        wisp.style.width = `${Math.random() * 30 + 10}px`;
-        wisp.style.height = wisp.style.width;
-        wisp.style.left = `${Math.random() * 100}%`;
-        wisp.style.top = `${Math.random() * 100}%`;
-        wisp.style.animationDuration = `${15 + Math.random() * 10}s`;
-        document.body.appendChild(wisp);
+    searchInput.addEventListener('input', ()=>{
+      const term = searchInput.value.toLowerCase();
+      filtered = faqs.filter(f=> f.q.toLowerCase().includes(term) || f.a.toLowerCase().includes(term));
+      currentPage = 0; renderPages();
+    });
+
+    soundBtn.addEventListener('click', ()=>{
+      soundOn = !soundOn;
+      soundBtn.textContent = soundOn ? '🔊 Sound' : '🔇 Sound';
+      soundBtn.setAttribute('aria-pressed', String(soundOn));
+    });
+
+    // ===== Wisps =====
+    function spawnWisps(n){
+      for(let i=0;i<n;i++){
+        const d=document.createElement('div');
+        d.className='wisp';
+        const sz = Math.random()*26+10; d.style.width=sz+'px'; d.style.height=sz+'px';
+        d.style.left=Math.random()*100+'%'; d.style.top=Math.random()*100+'%';
+        d.style.animationDuration = (14 + Math.random()*10) + 's';
+        document.body.appendChild(d);
       }
     }
 
-    spawnWisps(25);
-    renderPages(faqs);
+    // Init
+    spawnWisps(20);
+    renderPages();
   </script>
 </body>
 </html>
