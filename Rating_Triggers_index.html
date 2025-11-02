@@ -43,7 +43,7 @@
   <input type="number" id="newLikelihood" min="0" max="100" placeholder="Likelihood %">
   <button id="submitBtn">Submit Trigger</button>
   <div class="result" id="submitResult"></div>
-  
+
   <h2 style="margin-bottom:0.2em; color:#f7f7f7;">Submitted Triggers</h2>
   <table id="dashboardTable">
     <thead>
@@ -56,16 +56,20 @@
       </tr>
     </thead>
     <tbody id="dashboardBody">
-      <tr><td colspan="5">Loading...</td></tr>
+      <tr><td colspan="5">Loading.</td></tr>
     </tbody>
   </table>
-  
+
   <button id="testFirebaseBtn">Test Firebase Connection</button>
   <div class="result" id="testFirebaseResult"></div>
+
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
   <script>
-    // Database: 5 triggers, 10 sources each, expandable!
+    // ===== Database (same as your current file) =====
+    // 5 demo triggers with 10 sources each; expand as needed. 
     const visualSnowDatabase = [
       {
         name: "Cannabis",
@@ -156,7 +160,7 @@
       );
     }
 
-    // Did You Mean / Fuzzy Suggestion
+    // Did You Mean / Fuzzy Suggestion (unchanged)
     function didYouMean(input, entries) {
       input = input.toLowerCase();
       let minDist = Infinity, best = null;
@@ -179,12 +183,14 @@
       return dp[a.length][b.length];
     }
 
+    // ===== IP (for per-IP vote guard) =====
+    // Note: your current build stores raw IPs in Firestore; works for now but keep privacy in mind. :contentReference[oaicite:2]{index=2}
     let userIP = null;
     fetch("https://api.ipify.org?format=json").then(r => r.json()).then(d => {
       userIP = d.ip;
     });
 
-    // Initialize Firebase
+    // ===== Firebase init (unchanged) =====
     const firebaseConfig = {
       apiKey: "AIzaSyDAvXTgheyHuVCJDZ6uCLldV19oNjmSE5U",
       authDomain: "visualsnowpercentage.firebaseapp.com",
@@ -199,45 +205,127 @@
     let lastKey = "";
     let lastMatch = null;
 
+    // ===== NEW: Source weighting + Bayesian helpers =====
+    const SOURCE_WEIGHTS = {
+      peer: 3.0,        // peer-reviewed studies / case series
+      registry: 2.2,    // Visual Snow Registry, self-report app
+      poll: 1.3,        // Twitter/Reddit polls
+      forum: 0.9,       // forums/FB/groups
+      other: 1.0
+    };
+
+    function classifySource(label){
+      const s = (label || "").toLowerCase();
+      if (/(puledda|study|case (series|report)|ssri study|panic study)/.test(s)) return 'peer';
+      if (/(registry|self-report app)/.test(s)) return 'registry';
+      if (/(poll|survey)/.test(s)) return 'poll';
+      if (/(reddit|forum|thread|facebook|vs uk|r\/visualsnowstudies|hppd)/.test(s)) return 'forum';
+      return 'other';
+    }
+
+    function weightedMean(entries){
+      let num = 0, den = 0;
+      for (const e of entries){
+        const w = SOURCE_WEIGHTS[classifySource(e.source)] ?? SOURCE_WEIGHTS.other;
+        num += w * e.value;
+        den += w;
+      }
+      return den ? (num / den) : 0;
+    }
+
+    // Bayesian shrinkage for community % toward the research mean
+    function bayesianCommunityPct(agree, disagree, priorMeanPct, k = 40){
+      const n = agree + disagree;
+      if (n <= 0) return null;
+      const alpha0 = (priorMeanPct/100) * k;
+      const beta0  = (1 - priorMeanPct/100) * k;
+      const alpha = alpha0 + agree;
+      const beta  = beta0 + disagree;
+      return 100 * (alpha / (alpha + beta));
+    }
+
+    // Community weight grows with votes (log curve)
+    function communityWeight(n){
+      // 0 at n=0, ~1 at ~20 votes, ~2 near 150 votes
+      return Math.log1p(n) / 3;
+    }
+
+    // ===== Main check button (REPLACED logic) =====
     document.getElementById('checkBtn').onclick = async () => {
       const q = document.getElementById('factorInput').value.trim().toLowerCase();
       const match = findMatch(q);
       const bar = document.getElementById('fillBar');
       const resultArea = document.getElementById('resultArea');
       const sourceInfo = document.getElementById('sourceInfo');
+
       bar.style.transition = "none";
       bar.style.width = "0%";
       void bar.offsetWidth;
       bar.style.transition = "width 1s";
+
       if (match) {
         lastKey = match.name.toLowerCase();
         lastMatch = match;
+
         try {
           const doc = await db.collection("votes").doc(lastKey).get();
-          let likelihoods = match.likelihoods.slice(); // clone base sources
-          let communityInfo = "";
+
+          // 1) Research-weighted score (static sources only)
+          const researchWeighted = Math.round( weightedMean(match.likelihoods) );
+
+          // 2) Community (Bayesian) — shrink toward researchWeighted
+          let community = null, communityRaw = null, votesN = 0;
           if (doc.exists) {
-            const data = doc.data();
+            const data = doc.data() || {};
             const agree = data.agree || 0;
             const disagree = data.disagree || 0;
-            if (agree + disagree > 0) {
-              const communityPct = Math.round((agree / (agree + disagree)) * 100);
-              likelihoods.push({ value: communityPct, source: "Live Community Votes" });
-              communityInfo = ` + 1 community score`;
+            votesN = agree + disagree;
+            if (votesN > 0) {
+              communityRaw = Math.round( (agree / votesN) * 100 );
+              community = Math.round( bayesianCommunityPct(agree, disagree, researchWeighted, 40) );
             }
           }
-          const avg = Math.round(likelihoods.reduce((a, b) => a + b.value, 0) / likelihoods.length);
-          resultArea.innerText = `Likelihood: ${avg}%\n(Mean of ${likelihoods.length} sources${communityInfo})`;
-          sourceInfo.innerHTML = `<b>Sources:</b><ul class="sources">` +
-            likelihoods.map(x =>
-              `<li><span class="src-value">${x.value}%</span> <span class="${x.source==='Live Community Votes'?'src-vote':'src-label'}">[${x.source}]</span></li>`
-            ).join("") + "</ul>";
-          bar.style.width = avg + "%";
+
+          // 3) Overall — conservative blend
+          let overall = researchWeighted;
+          if (community !== null){
+            const wR = 1;
+            const wC = communityWeight(votesN);
+            overall = Math.round( (wR*researchWeighted + wC*community) / (wR + wC) );
+          }
+
+          // Build source list showing research components and community summary
+          const researchList = match.likelihoods
+            .map(x => `<li><span class="src-value">${x.value}%</span> <span class="src-label">[${x.source}]</span></li>`)
+            .join("");
+
+          const parts = [
+            `<b>Overall:</b> ${overall}%`,
+            `<span class="src-label">Research-weighted:</span> ${researchWeighted}%`
+          ];
+          if (community !== null){
+            parts.push(`<span class="src-label">Community (Bayesian):</span> ${community}% <span class="src-label">(raw ${communityRaw}% • n=${votesN})</span>`);
+          }
+
+          resultArea.innerHTML = parts.join(" &nbsp;•&nbsp; ");
+          bar.style.width = overall + "%";
+
+          sourceInfo.innerHTML = `<b>Research sources (weighted):</b>
+            <ul class="sources">${researchList}</ul>
+            ${
+              community !== null
+              ? `<div class="src-vote" style="margin-top:.5em">Live Community shrunk toward research; weight grows with votes (n=${votesN}).</div>`
+              : `<div class="src-label" style="margin-top:.5em">No community votes yet.</div>`
+            }`;
+
         } catch (e) {
-          resultArea.innerText = "Error loading votes. Showing estimate.";
-          bar.style.width = Math.round(match.likelihoods.reduce((a, b) => a + b.value, 0) / match.likelihoods.length) + "%";
+          // Fallback: research-only weighted mean
+          const researchWeighted = Math.round( weightedMean(match.likelihoods) );
+          resultArea.innerText = `Likelihood (Research-weighted only): ${researchWeighted}%`;
+          bar.style.width = researchWeighted + "%";
           sourceInfo.innerHTML = "";
         }
+
       } else {
         let suggestion = didYouMean(q, visualSnowDatabase);
         lastKey = "";
@@ -248,10 +336,11 @@
         sourceInfo.innerText = "";
         bar.style.width = "0%";
       }
+
       document.getElementById('voteMsg').innerText = "";
     };
 
-    // --- Per-IP voting: Main Voting ---
+    // ===== Per-IP voting (unchanged) for main card ===== :contentReference[oaicite:3]{index=3}
     document.getElementById('agreeBtn').onclick = async () => {
       if (!lastKey) return;
       if (!userIP) {
@@ -271,6 +360,7 @@
       document.getElementById('voteMsg').innerText = "Thanks for voting 👍!";
       document.getElementById('checkBtn').click();
     };
+
     document.getElementById('disagreeBtn').onclick = async () => {
       if (!lastKey) return;
       if (!userIP) {
@@ -291,7 +381,7 @@
       document.getElementById('checkBtn').click();
     };
 
-    // Trigger Submission
+    // ===== Trigger submission (unchanged) =====
     document.getElementById('submitBtn').onclick = async () => {
       const name = document.getElementById('newName').value.trim();
       const category = document.getElementById('newCategory').value;
@@ -312,7 +402,7 @@
       }
     };
 
-    // Live Dashboard WITH Voting + true Per-IP voting
+    // ===== Live Dashboard (unchanged, still per-IP gating) ===== 
     db.collection("submissions").orderBy("timestamp", "desc").onSnapshot(async snap => {
       const body = document.getElementById('dashboardBody');
       body.innerHTML = "";
@@ -350,7 +440,7 @@
       }
     });
 
-    // --- Per-IP voting: Dashboard Voting ---
+    // --- Per-IP voting: Dashboard voting (unchanged) ---
     window.voteDashboard = async (trigger, type, btn) => {
       if (!userIP) {
         document.getElementById('voteMsg').innerText = "IP not detected yet—try again.";
@@ -371,7 +461,7 @@
       document.getElementById('voteMsg').innerText = "Thanks for voting!";
     };
 
-    // Firebase Test Button
+    // ===== Firebase Test (unchanged) =====
     document.getElementById('testFirebaseBtn').onclick = async () => {
       const out = document.getElementById('testFirebaseResult');
       try {
